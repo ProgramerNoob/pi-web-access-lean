@@ -1,7 +1,7 @@
 # @ssk_dev/pi-web-access-lean
 
 <!-- token-benchmark:summary:start -->
-> **Token benchmark: Lean 153, upstream `pi-web-access@0.35.0` 2,979 — 94.9% fewer.**
+> **Token benchmark: Lean 153, upstream `pi-web-access@0.40.0` 2,837 — 94.6% fewer.**
 <!-- token-benchmark:summary:end -->
 > [See my full setup for Pi](https://github.com/kunkun9527/my-lean-pi-setup)
 
@@ -55,16 +55,16 @@ With only this extension enabled, its recurring model-facing initialization cont
 
 | Variant | Tool and prompt contribution | Total |
 | --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.35.1` | `web_access` (153) | **153** |
-| Upstream `pi-web-access@0.35.0` | `web_search` (1,188) + `source_check` (618) + `fetch_content` (731) + `get_search_content` (442) | **2,979** |
+| Lean `@ssk_dev/pi-web-access-lean@0.40.0` | `web_access` (153) | **153** |
+| Upstream `pi-web-access@0.40.0` | `web_search` (954) + `source_check` (640) + `fetch_content` (801) + `get_search_content` (442) | **2,837** |
 
-This saves **2,826 tokens (94.9%)**.
-Measured with Pi 1.0.2 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
+This saves **2,684 tokens (94.6%)**.
+Measured with Pi 1.2.0 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
 <!-- token-benchmark:benchmark:end -->
 
 ## Versions
 
-Upstream runtime is pinned to `pi-web-access@0.35.0`.
+Upstream runtime is pinned to `pi-web-access@0.40.0`.
 
 ## Development
 

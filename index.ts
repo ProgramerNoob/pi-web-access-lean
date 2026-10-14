@@ -92,6 +92,33 @@ function parseInput(input: string, inputName: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+// Upstream result hints name its hidden retrieval tool, e.g.
+// get_search_content({ responseId: "id", urlIndex: 0 }); point them at the facade.
+const RETRIEVAL_TOOL = ROUTES.get.toolName;
+const RETRIEVAL_CALL = new RegExp(`\\b${RETRIEVAL_TOOL}\\(\\{([^{}]*)\\}\\)`, "g");
+const RETRIEVAL_NAME = new RegExp(`\\b${RETRIEVAL_TOOL}\\b`, "g");
+
+function rewriteRetrievalHints(text: string): string {
+  return text
+    .replace(RETRIEVAL_CALL, (_match, body: string) => {
+      const json = `{${body.trim().replace(/(\w+):\s*/g, '"$1":').replace(/,\s*/g, ",")}}`;
+      return `web_access({ op: "get", input: '${json}' })`;
+    })
+    .replace(RETRIEVAL_NAME, 'web_access op "get"');
+}
+
+function withFacadeHints<T>(result: T): T {
+  const content = (result as { content?: unknown })?.content;
+  if (!Array.isArray(content)) return result;
+  return {
+    ...result,
+    content: content.map((entry) =>
+      entry?.type === "text" && typeof entry.text === "string"
+        ? { ...entry, text: rewriteRetrievalHints(entry.text) }
+        : entry),
+  };
+}
+
 function helpResult(
   operation: string,
   tools: Map<string, CapturedTool>,
@@ -266,13 +293,14 @@ export function createWebAccessFacade(
         if (!tool) {
           throw new Error(`web_access could not find upstream tool: ${route.toolName}`);
         }
-        return tool.execute(
+        const args = tool.prepareArguments ? tool.prepareArguments(parsed) : parsed;
+        return withFacadeHints(await tool.execute(
           callId,
-          parsed,
+          args,
           signal,
           onUpdate,
           ctx,
-        );
+        ));
       },
     };
     pi.registerTool(decorateWithCollapsedDisplay(facadeTool));

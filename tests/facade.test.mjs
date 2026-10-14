@@ -96,7 +96,7 @@ test("registers one web_access facade instead of four provider tools", () => {
   );
 });
 
-test("real upstream help exposes the 0.32 search provider surface", async () => {
+test("real upstream help exposes the 0.40 search provider surface", async () => {
   const pi = createPi();
   extension(pi);
   const result = await facadeTool(pi).execute("help-search", { op: "help", input: "search" });
@@ -356,4 +356,53 @@ test("drops upstream web_enable and never lets upstream change active tools", as
   assert.deepEqual(activeCalls, []);
   const help = await facadeTool(pi).execute("help", { op: "help", input: "" });
   assert.doesNotMatch(help.content[0].text, /web_enable/);
+});
+
+test("applies upstream prepareArguments before execution", async () => {
+  const calls = [];
+  const upstream = (pi) => {
+    pi.registerTool({
+      name: "web_search",
+      prepareArguments: (args) => ({ ...args, queries: JSON.parse(args.queries) }),
+      async execute(_callId, params) {
+        calls.push(params);
+        return { content: [{ type: "text", text: "ok" }] };
+      },
+    });
+  };
+  const pi = createPi();
+  createWebAccessFacade(upstream)(pi);
+  await facadeTool(pi).execute("call-prep", { op: "search", input: '{"queries":"[\\"alpha\\"]"}' });
+  assert.deepEqual(calls, [{ queries: ["alpha"] }]);
+
+  // The real pinned upstream still restores stringified arrays through this hook.
+  const { default: realUpstream } = await jiti.import("pi-web-access/index.ts");
+  const real = createPi();
+  realUpstream(real);
+  const search = real.tools.find((tool) => tool.name === "web_search");
+  assert.deepEqual(search.prepareArguments({ queries: '["alpha"]' }), { queries: ["alpha"] });
+});
+
+test("rewrites upstream retrieval hints to the facade call", async () => {
+  const upstream = (pi) => {
+    pi.registerTool({
+      name: "fetch_content",
+      async execute() {
+        return {
+          content: [
+            { type: "text", text: 'Use get_search_content({ responseId: "r-1", urlIndex: 0, offset: 0, limit: 30000 }) for the next slice. Enable get_search_content to retrieve more.' },
+            { type: "image", data: "x" },
+          ],
+          details: { responseId: "r-1" },
+        };
+      },
+    });
+  };
+  const pi = createPi();
+  createWebAccessFacade(upstream)(pi);
+  const result = await facadeTool(pi).execute("call-hint", { op: "fetch", input: "https://example.com" });
+  assert.equal(result.content[0].text,
+    'Use web_access({ op: "get", input: \'{"responseId":"r-1","urlIndex":0,"offset":0,"limit":30000}\' }) for the next slice. Enable web_access op "get" to retrieve more.');
+  assert.deepEqual(result.content[1], { type: "image", data: "x" });
+  assert.deepEqual(result.details, { responseId: "r-1" });
 });
