@@ -94,17 +94,34 @@ function parseInput(input: string, inputName: string): Record<string, unknown> {
 
 // Upstream result hints name its hidden retrieval tool, e.g.
 // get_search_content({ responseId: "id", urlIndex: 0 }); point them at the facade.
+// Only exact upstream hint forms are rewritten so fetched page text stays intact.
 const RETRIEVAL_TOOL = ROUTES.get.toolName;
+const GET_CALL = 'web_access op "get"';
 const RETRIEVAL_CALL = new RegExp(`\\b${RETRIEVAL_TOOL}\\(\\{([^{}]*)\\}\\)`, "g");
-const RETRIEVAL_NAME = new RegExp(`\\b${RETRIEVAL_TOOL}\\b`, "g");
+const HINT_ARG = /^\s*(responseId|urlIndex|queryIndex|offset|limit):\s*("[\w-]*"|\d+)\s*$/;
+const RETRIEVAL_PHRASES: Array<[RegExp, string]> = [
+  [new RegExp(`\\bEnable ${RETRIEVAL_TOOL} to retrieve\\b`, "g"), `Enable ${GET_CALL} to retrieve`],
+  [new RegExp(`\\buse ${RETRIEVAL_TOOL} findText or offset\\b`, "g"), `use ${GET_CALL} with findText or offset`],
+  [new RegExp(`\\buse \`${RETRIEVAL_TOOL}\` with\\b`, "g"), `use ${GET_CALL} with`],
+  [new RegExp(`\\bretrieval with ${RETRIEVAL_TOOL}\\b`, "g"), `retrieval with ${GET_CALL}`],
+];
+
+function facadeGetCall(match: string, body: string): string {
+  const args: Record<string, unknown> = {};
+  for (const part of body.split(",")) {
+    const pair = part.match(HINT_ARG);
+    if (!pair) return match;
+    args[pair[1]] = JSON.parse(pair[2]);
+  }
+  return `web_access({ op: "get", input: '${JSON.stringify(args)}' })`;
+}
 
 function rewriteRetrievalHints(text: string): string {
-  return text
-    .replace(RETRIEVAL_CALL, (_match, body: string) => {
-      const json = `{${body.trim().replace(/(\w+):\s*/g, '"$1":').replace(/,\s*/g, ",")}}`;
-      return `web_access({ op: "get", input: '${json}' })`;
-    })
-    .replace(RETRIEVAL_NAME, 'web_access op "get"');
+  let rewritten = text.replace(RETRIEVAL_CALL, facadeGetCall);
+  for (const [pattern, replacement] of RETRIEVAL_PHRASES) {
+    rewritten = rewritten.replace(pattern, replacement);
+  }
+  return rewritten;
 }
 
 function withFacadeHints<T>(result: T): T {

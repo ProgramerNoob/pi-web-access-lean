@@ -406,3 +406,20 @@ test("rewrites upstream retrieval hints to the facade call", async () => {
   assert.deepEqual(result.content[1], { type: "image", data: "x" });
   assert.deepEqual(result.details, { responseId: "r-1" });
 });
+
+test("leaves fetched page text that mentions the upstream tool unchanged", async () => {
+  const page = 'The get_search_content tool returns slices.\nget_search_content({ responseId: id })\nget_search_content({ responseId: "x", query: "a, b" })';
+  const upstream = (pi) => {
+    pi.registerTool({
+      name: "fetch_content",
+      async execute() {
+        return { content: [{ type: "text", text: `${page}\n\n---\nUse get_search_content({ responseId: "r-2", urlIndex: 0, offset: 10 }) for the next slice.` }] };
+      },
+    });
+  };
+  const pi = createPi();
+  createWebAccessFacade(upstream)(pi);
+  const result = await facadeTool(pi).execute("call-page", { op: "fetch", input: "https://example.com" });
+  assert.equal(result.content[0].text,
+    `${page}\n\n---\nUse web_access({ op: "get", input: '{"responseId":"r-2","urlIndex":0,"offset":10}' }) for the next slice.`);
+});
