@@ -9,6 +9,20 @@
 
 基于 [`pi-web-access`](https://github.com/nicobailon/pi-web-access) 的精简封装。在完整保留上游网络检索能力的同时，将原本分散的 4 个工具整合成单一紧凑接口，大幅节省 Prompt 空间。
 
+## 初始化上下文占用对比
+
+<!-- token-benchmark:benchmark:start -->
+单独启用本扩展时，模型可见的常驻初始化上下文如下：
+
+| 版本 | 工具与 Prompt 构成 | 合计 |
+| --- | --- | ---: |
+| Lean `@ssk_dev/pi-web-access-lean@0.40.1` | `web_access` (153) | **153** |
+| 上游 `pi-web-access@0.40.0` | `web_search` (954) + `source_check` (640) + `fetch_content` (801) + `get_search_content` (442) | **2,837** |
+
+节省 **2,684 tokens（94.6%）**。
+测量环境为 Pi 1.2.0 的独立临时进程、空白工作目录与空白配置。排除内置工具、Skills、上下文文件、会话历史、用户消息、无关扩展、运行时 UI 与 Slash Commands；计入扩展的 `before_agent_start` 注入。Token 是按 `ceil(字符数 / 4)` 计算的固定字符代理估算，并非模型 tokenizer 实际计费值。
+<!-- token-benchmark:benchmark:end -->
+
 ## 核心特性
 
 * 保留全部联网功能：支持网页搜索、结果翻页续取、事实与来源核验、网页全文抓取。
@@ -47,20 +61,6 @@ web_access
 ```
 
 如需使用高级参数或批量操作，请将 JSON 对象序列化后作为 `input` 字符串传入。仅在需要查看完整上游 Schema 时调用 `help`。
-
-## 初始化上下文占用对比
-
-<!-- token-benchmark:benchmark:start -->
-单独启用本扩展时，模型可见的常驻初始化上下文如下：
-
-| 版本 | 工具与 Prompt 构成 | 合计 |
-| --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.40.0` | `web_access` (153) | **153** |
-| 上游 `pi-web-access@0.40.0` | `web_search` (954) + `source_check` (640) + `fetch_content` (801) + `get_search_content` (442) | **2,837** |
-
-节省 **2,684 tokens（94.6%）**。
-测量环境为 Pi 1.2.0 的独立临时进程、空白工作目录与空白配置。排除内置工具、Skills、上下文文件、会话历史、用户消息、无关扩展、运行时 UI 与 Slash Commands；计入扩展的 `before_agent_start` 注入。Token 是按 `ceil(字符数 / 4)` 计算的固定字符代理估算，并非模型 tokenizer 实际计费值。
-<!-- token-benchmark:benchmark:end -->
 
 ## 版本说明
 
