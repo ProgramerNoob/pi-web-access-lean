@@ -407,6 +407,22 @@ test("rewrites upstream retrieval hints to the facade call", async () => {
   assert.deepEqual(result.details, { responseId: "r-1" });
 });
 
+test("rewrites upstream 404 guidance to facade operations", async () => {
+  const upstream = (pi) => {
+    pi.registerTool({
+      name: "fetch_content",
+      async execute() {
+        return { content: [{ type: "text", text: "Error: HTTP 404\n\nThe page may have moved or been renamed. Use web_search to find the current URL, then retry fetch_content with it." }] };
+      },
+    });
+  };
+  const pi = createPi();
+  createWebAccessFacade(upstream)(pi);
+  const result = await facadeTool(pi).execute("call-404", { op: "fetch", input: "https://example.com/gone" });
+  assert.equal(result.content[0].text,
+    'Error: HTTP 404\n\nThe page may have moved or been renamed. Use web_access op "search" to find the current URL, then retry web_access op "fetch" with it.');
+});
+
 test("leaves fetched page text that mentions the upstream tool unchanged", async () => {
   const page = 'The get_search_content tool returns slices.\nget_search_content({ responseId: id })\nget_search_content({ responseId: "x", query: "a, b" })';
   const upstream = (pi) => {

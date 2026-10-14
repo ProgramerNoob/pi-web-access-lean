@@ -92,7 +92,7 @@ function parseInput(input: string, inputName: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-// Upstream result hints name its hidden retrieval tool, e.g.
+// Upstream result hints name its hidden tools, e.g.
 // get_search_content({ responseId: "id", urlIndex: 0 }); point them at the facade.
 // Only exact upstream hint forms are rewritten so fetched page text stays intact.
 const RETRIEVAL_TOOL = ROUTES.get.toolName;
@@ -104,6 +104,9 @@ const RETRIEVAL_PHRASES: Array<[RegExp, string]> = [
   [new RegExp(`\\buse ${RETRIEVAL_TOOL} findText or offset\\b`, "g"), `use ${GET_CALL} with findText or offset`],
   [new RegExp(`\\buse \`${RETRIEVAL_TOOL}\` with\\b`, "g"), `use ${GET_CALL} with`],
   [new RegExp(`\\bretrieval with ${RETRIEVAL_TOOL}\\b`, "g"), `retrieval with ${GET_CALL}`],
+  // HTTP 404/410 guidance from upstream extract.ts.
+  [new RegExp(`\\bUse ${ROUTES.search.toolName} to find the current URL\\b`, "g"), 'Use web_access op "search" to find the current URL'],
+  [new RegExp(`\\bthen retry ${ROUTES.fetch.toolName} with it\\b`, "g"), 'then retry web_access op "fetch" with it'],
 ];
 
 function facadeGetCall(match: string, body: string): string {
