@@ -20,7 +20,7 @@ With only this extension enabled, its recurring model-facing initialization cont
 | Upstream `pi-web-access@0.40.0` | `web_search` (954) + `source_check` (640) + `fetch_content` (801) + `get_search_content` (442) | **2,837** |
 
 This saves **2,684 tokens (94.6%)**.
-Measured with Pi 1.2.0 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
+Measured with Pi 1.3.0 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
 <!-- token-benchmark:benchmark:end -->
 
 ## Core Features
