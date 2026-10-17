@@ -1,8 +1,8 @@
 {
   "name": "@ssk_dev/pi-web-access-lean",
-  "version": "0.40.1",
+  "version": "0.42.0",
   "type": "module",
-  "description": "Lean Pi web access extension with full features: 152 initial tokens (94.9% fewer than current upstream).",
+  "description": "Lean Pi web access extension with full features: 153 initial tokens (94.6% fewer than current upstream).",
   "license": "MIT",
   "publishConfig": {
     "access": "public"
@@ -37,7 +37,7 @@
     "check": "npm run typecheck && npm test"
   },
   "dependencies": {
-    "pi-web-access": "0.40.0"
+    "pi-web-access": "0.42.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": ">=0.84.1",

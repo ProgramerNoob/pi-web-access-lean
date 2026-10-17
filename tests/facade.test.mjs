@@ -96,13 +96,14 @@ test("registers one web_access facade instead of four provider tools", () => {
   );
 });
 
-test("real upstream help exposes the 0.40 search provider surface", async () => {
+test("real upstream help exposes the 0.42 search provider surface", async () => {
   const pi = createPi();
   extension(pi);
   const result = await facadeTool(pi).execute("help-search", { op: "help", input: "search" });
   const text = result.content.map((item) => item.text ?? "").join("\n");
   assert.match(text, /serpapi/i);
   assert.match(text, /serply/i);
+  assert.match(text, /deepseek/i);
 });
 
 test("search shorthand forwards the original execution context", async () => {

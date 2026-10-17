@@ -1,7 +1,7 @@
 # @ssk_dev/pi-web-access-lean
 
 <!-- token-benchmark:summary:start -->
-> **Token benchmark: Lean 153, upstream `pi-web-access@0.40.0` 2,837 — 94.6% fewer.**
+> **Token benchmark: Lean 153, upstream `pi-web-access@0.42.0` 2,853 — 94.6% fewer.**
 <!-- token-benchmark:summary:end -->
 > [See my full setup for Pi](https://github.com/kunkun9527/my-lean-pi-setup)
 
@@ -16,10 +16,10 @@ With only this extension enabled, its recurring model-facing initialization cont
 
 | Variant | Tool and prompt contribution | Total |
 | --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.40.1` | `web_access` (153) | **153** |
-| Upstream `pi-web-access@0.40.0` | `web_search` (954) + `source_check` (640) + `fetch_content` (801) + `get_search_content` (442) | **2,837** |
+| Lean `@ssk_dev/pi-web-access-lean@0.42.0` | `web_access` (153) | **153** |
+| Upstream `pi-web-access@0.42.0` | `web_search` (962) + `source_check` (648) + `fetch_content` (801) + `get_search_content` (442) | **2,853** |
 
-This saves **2,684 tokens (94.6%)**.
+This saves **2,700 tokens (94.6%)**.
 Measured with Pi 1.3.0 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
 <!-- token-benchmark:benchmark:end -->
 
@@ -64,7 +64,7 @@ For batch or advanced parameters, pass a JSON object encoded as the `input` stri
 
 ## Versions
 
-Upstream runtime is pinned to `pi-web-access@0.40.0`.
+Upstream runtime is pinned to `pi-web-access@0.42.0`.
 
 ## Development
 
