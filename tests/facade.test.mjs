@@ -440,3 +440,128 @@ test("leaves fetched page text that mentions the upstream tool unchanged", async
   assert.equal(result.content[0].text,
     `${page}\n\n---\nUse web_access({ op: "get", input: '{"responseId":"r-2","urlIndex":0,"offset":10}' }) for the next slice.`);
 });
+
+const { Value } = await jiti.import("typebox/value");
+
+function prepare(args) {
+  const pi = createPi();
+  createWebAccessFacade((p) => p.registerTool({ name: "web_search", async execute() { return { content: [] }; } }))(pi);
+  const tool = facadeTool(pi);
+  return { prepared: tool.prepareArguments(args), valid: (value) => Value.Check(tool.parameters, value) };
+}
+
+test("prepareArguments infers an omitted op only from unambiguous fields", () => {
+  const cases = [
+    [{ responseId: "r-1" }, "get"],
+    [{ responseId: "r-1", query: "q", url: "https://a.test" }, "get"],
+    [{ url: "https://a.test" }, "fetch"],
+    [{ urls: ["https://a.test"] }, "fetch"],
+    [{ claim: "x" }, "check"],
+    [{ claim: "x", queries: ["y"] }, "check"],
+    [{ query: "x" }, "search"],
+    [{ queries: ["x"] }, "search"],
+    [{ input: '{"urls":["https://a.test"]}' }, "fetch"],
+    [{ input: "https://a.test/page" }, "fetch"],
+    [{ input: String.raw`C:\docs\paper.PDF` }, "fetch"],
+    [{ input: "./paper.pdf" }, "fetch"],
+    [{ input: "latest Pi release notes" }, "search"],
+    [{ input: "see paper.pdf" }, "search"],
+    [{ input: { claim: "x" } }, "check"],
+  ];
+  for (const [args, op] of cases) {
+    const { prepared, valid } = prepare(args);
+    assert.equal(prepared.op, op, JSON.stringify(args));
+    assert.ok(valid(prepared), JSON.stringify(prepared));
+  }
+
+  // Ambiguous or empty signals stay as-is and still fail schema validation.
+  const ambiguous = [
+    { url: "https://a.test", query: "x" },
+    { claim: "x", url: "https://a.test" },
+    { query: "x", input: "y" },
+    { input: "https://a.test", query: "x" },
+    { input: "" },
+    { input: "{not json" },
+    { input: '{"mode":"raw"}' },
+    {},
+  ];
+  for (const args of ambiguous) {
+    const { prepared, valid } = prepare(args);
+    assert.deepEqual(prepared, args);
+    assert.ok(!valid(prepared), JSON.stringify(args));
+  }
+});
+
+test("prepareArguments stringifies an object input and keeps explicit values", () => {
+  const { prepared, valid } = prepare({ op: "fetch", input: { urls: ["https://a.test"], mode: "raw" } });
+  assert.deepEqual(prepared, { op: "fetch", input: '{"urls":["https://a.test"],"mode":"raw"}' });
+  assert.ok(valid(prepared));
+
+  const explicit = { op: "fetch", input: "latest news" };
+  assert.deepEqual(prepare(explicit).prepared, explicit);
+  const help = { op: "help", query: "x", input: "search" };
+  assert.deepEqual(prepare(help).prepared, help);
+  const unknown = { op: "bogus", query: "x" };
+  assert.deepEqual(prepare(unknown).prepared, unknown);
+  assert.ok(!prepare(unknown).valid(unknown));
+  assert.equal(prepare(null).prepared, null);
+  assert.deepEqual(prepare(["x"]).prepared, ["x"]);
+});
+
+test("prepareArguments moves top-level upstream fields into input", () => {
+  const cases = [
+    [{ op: "search", query: "x", numResults: 5 }, { query: "x", numResults: 5 }],
+    [{ op: "fetch", url: "https://a.test" }, { url: "https://a.test" }],
+    [{ query: "x", numResults: 5 }, { query: "x", numResults: 5 }],
+    // JSON input merges; on conflict the input value wins.
+    [{ op: "search", input: '{"queries":["a"]}', numResults: 3 }, { queries: ["a"], numResults: 3 }],
+    [{ op: "search", input: '{"numResults":2}', numResults: 9, includeContent: true }, { numResults: 2, includeContent: true }],
+    // A plain string input becomes the primary field.
+    [{ op: "search", input: "x", numResults: 5 }, { query: "x", numResults: 5 }],
+    [{ op: "search", input: "x", query: "x", numResults: 5 }, { query: "x", numResults: 5 }],
+    [{ op: "check", input: "claim text", fetchContent: true }, { claim: "claim text", fetchContent: true }],
+    [{ op: "get", input: "r-1", findText: "needle" }, { responseId: "r-1", findText: "needle" }],
+  ];
+  for (const [args, expected] of cases) {
+    const { prepared, valid } = prepare(args);
+    assert.equal(prepared.op, args.op ?? "search");
+    assert.deepEqual(Object.keys(prepared).sort(), ["input", "op"]);
+    assert.deepEqual(JSON.parse(prepared.input), expected, JSON.stringify(args));
+    assert.ok(valid(prepared));
+  }
+
+  // A plain string input conflicting with the top-level primary field is left untouched.
+  const conflict = { op: "search", input: "x", query: "y", numResults: 5 };
+  assert.deepEqual(prepare(conflict).prepared, conflict);
+
+  // Pure and idempotent.
+  const original = { op: "search", query: "x", numResults: 5 };
+  const snapshot = structuredClone(original);
+  const { prepared } = prepare(original);
+  assert.deepEqual(original, snapshot);
+  assert.deepEqual(prepare(prepared).prepared, prepared);
+});
+
+test("prepared top-level fields reach the upstream tool and local PDFs", async () => {
+  const calls = [];
+  const upstream = (pi) => {
+    pi.registerTool({
+      name: "web_search",
+      prepareArguments: (args) => ({ ...args, queries: args.queries && JSON.parse(args.queries) }),
+      async execute(_callId, params) {
+        calls.push(params);
+        return { content: [{ type: "text", text: "ok" }] };
+      },
+    });
+  };
+  const pi = createPi();
+  createWebAccessFacade(upstream)(pi);
+  const tool = facadeTool(pi);
+  await tool.execute("call-top", tool.prepareArguments({ query: "x", numResults: 5 }));
+  assert.deepEqual(calls[0], { query: "x", numResults: 5, queries: undefined });
+
+  const result = await tool.execute("call-pdf", tool.prepareArguments({ url: fixturePath, mode: "raw" }));
+  assert.match(result.content[0].text, /Unsupported content type in raw mode/);
+  const pdf = await tool.execute("call-pdf-2", tool.prepareArguments({ input: fixturePath }));
+  assert.match(pdf.content[0].text, /Pages: 5/);
+});

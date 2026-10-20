@@ -92,6 +92,82 @@ function parseInput(input: string, inputName: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+// Fields that identify an operation. `also` lists fields the upstream tool accepts besides its own
+// (get_search_content takes query/url; source_check takes queries), so they do not make it ambiguous.
+const SIGNALS: Record<Operation, { own: string[]; also: string[] }> = {
+  get: { own: ["responseId"], also: ["query", "url"] },
+  check: { own: ["claim"], also: ["queries"] },
+  fetch: { own: ["url", "urls"], also: [] },
+  search: { own: ["query", "queries"], also: [] },
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseJsonObject(text: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function inferOpFromFields(fields: Record<string, unknown>): Operation | undefined {
+  const ops = Object.keys(SIGNALS) as Operation[];
+  const known = new Set(ops.flatMap((op) => SIGNALS[op].own));
+  const present = Object.keys(fields).filter((key) => known.has(key));
+  const matches = ops.filter((op) => {
+    const { own, also } = SIGNALS[op];
+    return present.some((key) => own.includes(key))
+      && present.every((key) => own.includes(key) || also.includes(key));
+  });
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+// Pure string check, no filesystem access: execute still validates that a PDF exists.
+function inferOpFromText(text: string): Operation {
+  const isUrl = /^https?:\/\/\S+$/i.test(text);
+  return isUrl || (isLocalPath(text) && extname(text).toLowerCase() === ".pdf") ? "fetch" : "search";
+}
+
+// Runs before schema validation. Models often omit `op`, pass `input` as an object, or put
+// upstream fields at the top level; fix only what is unambiguous and leave the rest to validation.
+function prepareFacadeArguments(args: unknown): any {
+  if (!isRecord(args)) return args;
+  const { op, input: rawInput, ...extra } = args;
+  if (rawInput !== undefined && typeof rawInput !== "string" && !isRecord(rawInput)) return args;
+  const input = isRecord(rawInput) ? JSON.stringify(rawInput) : rawInput;
+  const base = input === rawInput ? args : { ...args, input };
+  if (op === "help" || (op !== undefined && !(typeof op === "string" && Object.hasOwn(ROUTES, op)))) {
+    return base;
+  }
+
+  const text = input?.trim() ?? "";
+  const isJson = text.startsWith("{");
+  const json = isJson ? parseJsonObject(text) : undefined;
+  if (isJson && !json) return base; // invalid JSON: execute reports it
+  const hasExtra = Object.keys(extra).length > 0;
+
+  let route = op as Operation | undefined;
+  if (route === undefined) {
+    route = text && !json
+      ? (hasExtra ? undefined : inferOpFromText(text))
+      : inferOpFromFields({ ...json, ...extra });
+    if (route === undefined) return base;
+  }
+  if (!hasExtra) return op === undefined ? { ...base, op: route } : base;
+
+  const name = ROUTES[route].inputName;
+  let merged: Record<string, unknown>;
+  if (!text) merged = extra;
+  else if (json) merged = { ...extra, ...json };
+  else if (name in extra && extra[name] !== input) return op === undefined ? { ...base, op: route } : base;
+  else merged = { ...extra, [name]: input };
+  return { op: route, input: JSON.stringify(merged) };
+}
+
 // Upstream result hints name its hidden tools, e.g.
 // get_search_content({ responseId: "id", urlIndex: 0 }); point them at the facade.
 // Only exact upstream hint forms are rewritten so fetched page text stays intact.
@@ -172,10 +248,8 @@ interface LocalPDFInfo {
   sizeBytes: number;
 }
 
-function resolveLocalPDF(input: string): LocalPDFInfo | null {
-  const trimmed = input.trim();
-  const isLocal =
-    trimmed.startsWith("/") ||
+function isLocalPath(trimmed: string): boolean {
+  return trimmed.startsWith("/") ||
     trimmed.startsWith("./") ||
     trimmed.startsWith("../") ||
     trimmed.startsWith(".\\") ||
@@ -184,7 +258,11 @@ function resolveLocalPDF(input: string): LocalPDFInfo | null {
     trimmed.startsWith("file:") ||
     trimmed.startsWith("\\\\") ||
     /^[a-zA-Z]:[\\/]/.test(trimmed);
-  if (!isLocal) return null;
+}
+
+function resolveLocalPDF(input: string): LocalPDFInfo | null {
+  const trimmed = input.trim();
+  if (!isLocalPath(trimmed)) return null;
 
   let filePath = trimmed;
   if (trimmed.startsWith("file:")) {
@@ -293,6 +371,7 @@ export function createWebAccessFacade(
         "web_access: input is the query, claim, URL, local PDF path, or responseId for search, check, fetch, or get. Pass a JSON object string for batch or advanced parameters; use help only when fields are unclear.",
       ],
       parameters: FACADE_PARAMETERS,
+      prepareArguments: prepareFacadeArguments,
       async execute(callId, params, signal, onUpdate, ctx) {
         if (params.op === "help") {
           return helpResult((params.input ?? "").trim(), tools);

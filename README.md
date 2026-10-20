@@ -16,7 +16,7 @@ With only this extension enabled, its recurring model-facing initialization cont
 
 | Variant | Tool and prompt contribution | Total |
 | --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.42.0` | `web_access` (153) | **153** |
+| Lean `@ssk_dev/pi-web-access-lean@0.42.1` | `web_access` (153) | **153** |
 | Upstream `pi-web-access@0.42.0` | `web_search` (962) + `source_check` (648) + `fetch_content` (801) + `get_search_content` (442) | **2,853** |
 
 This saves **2,700 tokens (94.6%)**.
@@ -61,6 +61,8 @@ Simple example:
 ```
 
 For batch or advanced parameters, pass a JSON object encoded as the `input` string. Use `help` only when you need the complete upstream schema.
+
+Mistakes are tolerated: an omitted `op` is inferred from unambiguous fields (`responseId`, `url`/`urls`, `claim`, `query`/`queries`, or a bare URL/PDF path vs. plain text), an object `input` is stringified, and upstream fields placed at the top level are merged into `input`.
 
 ## Versions
 

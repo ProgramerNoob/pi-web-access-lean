@@ -16,7 +16,7 @@
 
 | 版本 | 工具与 Prompt 构成 | 合计 |
 | --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.42.0` | `web_access` (153) | **153** |
+| Lean `@ssk_dev/pi-web-access-lean@0.42.1` | `web_access` (153) | **153** |
 | 上游 `pi-web-access@0.42.0` | `web_search` (962) + `source_check` (648) + `fetch_content` (801) + `get_search_content` (442) | **2,853** |
 
 节省 **2,700 tokens（94.6%）**。
@@ -61,6 +61,8 @@ web_access
 ```
 
 如需使用高级参数或批量操作，请将 JSON 对象序列化后作为 `input` 字符串传入。仅在需要查看完整上游 Schema 时调用 `help`。
+
+对常见传参错误做了兜底：缺少 `op` 时按无歧义字段推断（`responseId`、`url`/`urls`、`claim`、`query`/`queries`，或仅有 `input` 时按 URL/PDF 路径与普通文本区分）；`input` 传成对象时自动转为 JSON 字符串；放在顶层的上游字段会合并进 `input`。
 
 ## 版本说明
 
