@@ -3,6 +3,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import type {
   ExtensionAPI,
   ToolDefinition,
@@ -162,7 +163,13 @@ function prepareFacadeArguments(args: unknown): any {
   const name = ROUTES[route].inputName;
   let merged: Record<string, unknown>;
   if (!text) merged = extra;
-  else if (json) merged = { ...extra, ...json };
+  else if (json) {
+    // A top-level field that disagrees with input is not resolved silently: leave it for validation.
+    if (Object.keys(extra).some((key) => Object.hasOwn(json, key) && !isDeepStrictEqual(json[key], extra[key]))) {
+      return op === undefined ? { ...base, op: route } : base;
+    }
+    merged = { ...json, ...extra };
+  }
   else if (name in extra && extra[name] !== input) return op === undefined ? { ...base, op: route } : base;
   else merged = { ...extra, [name]: input };
   return { op: route, input: JSON.stringify(merged) };
@@ -377,6 +384,11 @@ export function createWebAccessFacade(
           return helpResult((params.input ?? "").trim(), tools);
         }
 
+        // prepareArguments merges every top-level field into input except one that disagrees with it.
+        const stray = Object.keys(params).filter((key) => key !== "op" && key !== "input");
+        if (stray.length > 0) {
+          throw new Error(`web_access: top-level ${stray.join(", ")} disagrees with input; pass each value once, inside input`);
+        }
         const route = ROUTES[params.op];
         if (!route) {
           throw new Error(`web_access operation is not implemented: ${params.op}`);

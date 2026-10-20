@@ -513,9 +513,9 @@ test("prepareArguments moves top-level upstream fields into input", () => {
     [{ op: "search", query: "x", numResults: 5 }, { query: "x", numResults: 5 }],
     [{ op: "fetch", url: "https://a.test" }, { url: "https://a.test" }],
     [{ query: "x", numResults: 5 }, { query: "x", numResults: 5 }],
-    // JSON input merges; on conflict the input value wins.
+    // JSON input merges with top-level fields that agree with it.
     [{ op: "search", input: '{"queries":["a"]}', numResults: 3 }, { queries: ["a"], numResults: 3 }],
-    [{ op: "search", input: '{"numResults":2}', numResults: 9, includeContent: true }, { numResults: 2, includeContent: true }],
+    [{ op: "search", input: '{"numResults":2}', numResults: 2, includeContent: true }, { numResults: 2, includeContent: true }],
     // A plain string input becomes the primary field.
     [{ op: "search", input: "x", numResults: 5 }, { query: "x", numResults: 5 }],
     [{ op: "search", input: "x", query: "x", numResults: 5 }, { query: "x", numResults: 5 }],
@@ -533,6 +533,11 @@ test("prepareArguments moves top-level upstream fields into input", () => {
   // A plain string input conflicting with the top-level primary field is left untouched.
   const conflict = { op: "search", input: "x", query: "y", numResults: 5 };
   assert.deepEqual(prepare(conflict).prepared, conflict);
+  // So is a top-level field disagreeing with JSON input (execute then rejects it).
+  const jsonConflict = { op: "search", input: '{"numResults":2}', numResults: 9 };
+  assert.deepEqual(prepare(jsonConflict).prepared, jsonConflict);
+  const inferredConflict = { input: '{"query":"a"}', query: "b" };
+  assert.deepEqual(prepare(inferredConflict).prepared, { ...inferredConflict, op: "search" });
 
   // Pure and idempotent.
   const original = { op: "search", query: "x", numResults: 5 };
@@ -564,4 +569,10 @@ test("prepared top-level fields reach the upstream tool and local PDFs", async (
   assert.match(result.content[0].text, /Unsupported content type in raw mode/);
   const pdf = await tool.execute("call-pdf-2", tool.prepareArguments({ input: fixturePath }));
   assert.match(pdf.content[0].text, /Pages: 5/);
+
+  // A top-level field that disagrees with input is rejected, never silently dropped.
+  for (const args of [{ op: "search", input: '{"numResults":2}', numResults: 9 }, { op: "search", input: "x", query: "y" }]) {
+    await assert.rejects(tool.execute("call-conflict", tool.prepareArguments(args)), /top-level \w+ disagrees with input/);
+  }
+  assert.equal(calls.length, 1);
 });
