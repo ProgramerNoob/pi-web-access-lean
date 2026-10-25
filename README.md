@@ -1,7 +1,7 @@
 # @ssk_dev/pi-web-access-lean
 
 <!-- token-benchmark:summary:start -->
-> **Token benchmark: Lean 153, upstream `pi-web-access@0.42.0` 2,853 — 94.6% fewer.**
+> **Token benchmark: Lean 153, upstream `pi-web-access@0.44.0` 2,867 — 94.7% fewer.**
 <!-- token-benchmark:summary:end -->
 > [See my full setup for Pi](https://github.com/kunkun9527/my-lean-pi-setup)
 
@@ -16,11 +16,11 @@ With only this extension enabled, its recurring model-facing initialization cont
 
 | Variant | Tool and prompt contribution | Total |
 | --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.42.2` | `web_access` (153) | **153** |
-| Upstream `pi-web-access@0.42.0` | `web_search` (962) + `source_check` (648) + `fetch_content` (801) + `get_search_content` (442) | **2,853** |
+| Lean `@ssk_dev/pi-web-access-lean@0.44.0` | `web_access` (153) | **153** |
+| Upstream `pi-web-access@0.44.0` | `web_search` (969) + `source_check` (655) + `fetch_content` (801) + `get_search_content` (442) | **2,867** |
 
-This saves **2,700 tokens (94.6%)**.
-Measured with Pi 1.3.0 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
+This saves **2,714 tokens (94.7%)**.
+Measured with Pi 1.4.0 in separate temporary processes with empty working directories and configuration. Built-in tools, skills, context files, session history, user messages, unrelated extensions, runtime UI, and slash commands are excluded; `before_agent_start` additions are included. Tokens are a fixed character-proxy estimate using `ceil(characters / 4)`, not provider tokenizer billing.
 <!-- token-benchmark:benchmark:end -->
 
 ## Core Features
@@ -66,7 +66,7 @@ Mistakes are tolerated: an omitted `op` is inferred from unambiguous fields (`re
 
 ## Versions
 
-Upstream runtime is pinned to `pi-web-access@0.42.0`.
+Upstream runtime is pinned to `pi-web-access@0.44.0`.
 
 ## Development
 

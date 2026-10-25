@@ -1,7 +1,7 @@
 # @ssk_dev/pi-web-access-lean
 
 <!-- token-benchmark:summary:start -->
-> **Token 基准：Lean 153，上游 `pi-web-access@0.42.0` 2,853，减少 94.6%。**
+> **Token 基准：Lean 153，上游 `pi-web-access@0.44.0` 2,867，减少 94.7%。**
 <!-- token-benchmark:summary:end -->
 > **完整配置参考：** [查看 Pi Lean Setup](https://github.com/kunkun9527/my-lean-pi-setup)
 
@@ -16,11 +16,11 @@
 
 | 版本 | 工具与 Prompt 构成 | 合计 |
 | --- | --- | ---: |
-| Lean `@ssk_dev/pi-web-access-lean@0.42.2` | `web_access` (153) | **153** |
-| 上游 `pi-web-access@0.42.0` | `web_search` (962) + `source_check` (648) + `fetch_content` (801) + `get_search_content` (442) | **2,853** |
+| Lean `@ssk_dev/pi-web-access-lean@0.44.0` | `web_access` (153) | **153** |
+| 上游 `pi-web-access@0.44.0` | `web_search` (969) + `source_check` (655) + `fetch_content` (801) + `get_search_content` (442) | **2,867** |
 
-节省 **2,700 tokens（94.6%）**。
-测量环境为 Pi 1.3.0 的独立临时进程、空白工作目录与空白配置。排除内置工具、Skills、上下文文件、会话历史、用户消息、无关扩展、运行时 UI 与 Slash Commands；计入扩展的 `before_agent_start` 注入。Token 是按 `ceil(字符数 / 4)` 计算的固定字符代理估算，并非模型 tokenizer 实际计费值。
+节省 **2,714 tokens（94.7%）**。
+测量环境为 Pi 1.4.0 的独立临时进程、空白工作目录与空白配置。排除内置工具、Skills、上下文文件、会话历史、用户消息、无关扩展、运行时 UI 与 Slash Commands；计入扩展的 `before_agent_start` 注入。Token 是按 `ceil(字符数 / 4)` 计算的固定字符代理估算，并非模型 tokenizer 实际计费值。
 <!-- token-benchmark:benchmark:end -->
 
 ## 核心特性
@@ -66,7 +66,7 @@ web_access
 
 ## 版本说明
 
-上游运行时锁定为 `pi-web-access@0.42.0`。
+上游运行时锁定为 `pi-web-access@0.44.0`。
 
 ## 本地开发
 
